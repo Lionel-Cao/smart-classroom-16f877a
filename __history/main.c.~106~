@@ -1,0 +1,76 @@
+#include <16F877A.h>
+#device ADC=10
+
+#FUSES NOWDT                    //No Watch Dog Timer
+#FUSES NOBROWNOUT               //No brownout reset
+#FUSES NOLVP                    //No low voltage prgming, B3(PIC16) or B5(PIC18) used for I/O
+
+#use delay(crystal=4000000)
+#include <DS1307.h>
+#include <lcd.h>
+
+#define     MENU     input(PIN_E0)
+#define     TANG     input(PIN_E1)
+#define     GIAM     input(PIN_E2)
+
+float LM35, nhiet;
+int i;
+void nhietdo();
+void main()
+{
+   unsigned char* Time;
+   unsigned char* Date;
+   signed char Gio,Phut,Giay;
+   signed char Ngay,Thang,Thu;
+   const char ThuNgay[7][6]={"CN","T2","T3","T4","T5","T6","T7"};
+   SETUP_ADC(ADC_CLOCK_INTERNAL);
+   SETUP_ADC_PORTS(AN0);
+   SET_ADC_CHANNEL(0);
+   lcd_init();
+   lcd_putc('\f');
+   
+   while(TRUE)
+   {
+      Time = Get_DS1307_RTC_Time();
+      Gio = Time[2];
+      Phut = Time[1];
+      Giay = Time[0];
+   
+      Date = Get_DS1307_RTC_Date();
+      Thu = Date[0];
+      Ngay = Date[1];
+      Thang = Date[2];
+      delay_ms(50);
+      
+      lcd_gotoxy(1,1);
+      printf(lcd_putc,"%02u:%02u:%02u",Gio,Phut,Giay);
+      lcd_gotoxy(1,2);
+      printf(lcd_putc,"%02s-%02u-%02u",ThuNgay[Thu-1],Ngay,Thang);
+      for(i=0, i<=100, i++)
+      {
+         LM35 =read_adc();
+      }
+      nhiet=LM35/100/2.046
+      lcd_gotoxy(10,1);
+      printf(lcd_putc,"%02.1f",nhiet);
+      lcd_putc(223);
+      lcd_putc("C");
+      nhietdo();
+      delay_ms(50);
+   }
+}
+void nhietdo()
+{
+    if(LM35>=27)
+      {
+         lcd_gotoxy(10,2);
+         printf(lcd_putc,"FAN:ON ");
+         output_high(PIN_E0);
+      }
+      else if(LM35<=23)
+      {
+         lcd_gotoxy(10,2);
+         printf(lcd_putc,"FAN:OFF");
+         output_low(PIN_E0);
+      }
+}
